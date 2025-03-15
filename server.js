@@ -88,10 +88,8 @@ app.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
-        // Gera um token JWT
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-
-        res.json({ message: 'Login bem-sucedido!', token });
+        // Se o login for bem-sucedido, apenas retorne uma mensagem de sucesso
+        res.json({ message: 'Login bem-sucedido!' });
     } catch (err) {
         console.error("Erro no login:", err);
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
