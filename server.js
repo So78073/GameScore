@@ -7,6 +7,8 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const path = require('path');
 
+const hashedPassword = await bcrypt.hash(password, 10);
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -59,7 +61,6 @@ app.post('/register', [
 
 
 
-// 📌 Rota de Login (comparando senha criptografada)
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -79,18 +80,26 @@ app.post('/login', async (req, res) => {
         return res.status(400).json({ error: 'Usuário não encontrado!' });
     }
 
+    // Exibe a senha armazenada no banco para depuração
+    console.log('Senha armazenada no banco de dados (criptografada):', users.password);
+
     // Verifica a senha de forma segura
     const passwordMatch = await bcrypt.compare(password, users.password);
+
     if (!passwordMatch) {
         console.error('Senha inválida');
         return res.status(400).json({ error: 'Senha inválida!' });
     }
+
+    // Exibe os dados de login bem-sucedido para depuração
+    console.log('Login bem-sucedido para o usuário:', users.email);
 
     // Gera um token JWT
     const token = jwt.sign({ id: users.id, email: users.email }, JWT_SECRET, { expiresIn: '1h' });
 
     res.json({ message: 'Login bem-sucedido!', token });
 });
+
 
 
 // 📌 Rota Protegida com verificação de username e senha para o Admin
