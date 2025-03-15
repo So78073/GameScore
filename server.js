@@ -18,14 +18,10 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // 📌 Rota para servir o HTML na raiz "/"
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// 📌 Rota de Registro (com hashing de senha)
 app.post('/register', [
     body('email').isEmail().withMessage('Email inválido'),
-    body('password').isLength({ min: 8 }).withMessage('A senha deve ter pelo menos 8 caracteres')
+    body('password').isLength({ min: 8 }).withMessage('A senha deve ter pelo menos 8 caracteres'),
+    body('username').notEmpty().withMessage('O nome de usuário é obrigatório')
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -36,6 +32,17 @@ app.post('/register', [
 
     if (!username || !email || !password) {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
+    }
+
+    // Verifica se o email já existe
+    const { data: existingUser, error: emailError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+    if (existingUser) {
+        return res.status(400).json({ error: 'Email já está registrado!' });
     }
 
     // Criptografar a senha
@@ -50,6 +57,8 @@ app.post('/register', [
 
     res.json({ message: 'Usuário registrado com sucesso!' });
 });
+
+
 
 // 📌 Rota de Login (comparando senha criptografada)
 app.post('/login', async (req, res) => {
