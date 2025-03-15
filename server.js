@@ -1,53 +1,95 @@
+require('dotenv').config();
 const express = require('express');
-const fs = require('fs');
-const app = express();
-const PORT = 3000;
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { createClient } = require('@supabase/supabase-js');
 
+const app = express();
 app.use(cors());
-
-
 app.use(express.json());
 
-const USERS_FILE = 'users.json';
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// Carregar usuários do arquivo JSON
-const loadUsers = () => {
-    if (!fs.existsSync(USERS_FILE)) return [];
-    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-};
+// 📌 Rota de Registro
+app.post('/register', async (req, res) => {
+    const { username, email, password } = req.body;
 
-// Salvar usuários no arquivo JSON
-const saveUsers = (users) => {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-};
-
-// Rota de registro
-app.post('/register', (req, res) => {
-    const { username, password } = req.body;
-    let users = loadUsers();
-    
-    if (users.find(user => user.username === username)) {
-        return res.status(400).json({ error: 'Usuário já existe!' });
+    if (!username || !email || !password) {
+        return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
-    
-    users.push({ username, password });
-    saveUsers(users);
-    
+
+    // Hash da senha
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insere o usuário no Supabase
+    const { data, error } = await supabase
+        .from('users')
+        .insert([{ username, email, password: hashedPassword }]);
+
+    if (error) return res.status(400).json({ error: error.message });
+
     res.json({ message: 'Usuário registrado com sucesso!' });
 });
 
-// Rota de login
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    let users = loadUsers();
-    
-    const user = users.find(user => user.username === username && user.password === password);
-    if (!user) {
-        return res.status(400).json({ error: 'Usuário ou senha inválidos!' });
+// 📌 Rota de Login
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email e senha são obrigatórios!' });
     }
-    
-    res.json({ message: 'Login bem-sucedido!' });
+
+    // Busca o usuário no Supabase
+    const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+    if (error || !users) {
+        return res.status(400).json({ error: 'Usuário não encontrado!' });
+    }
+
+    // Verifica a senha
+    const isPasswordValid = await bcrypt.compare(password, users.password);
+    if (!isPasswordValid) {
+        return res.status(400).json({ error: 'Senha inválida!' });
+    }
+
+    // Gera um token JWT
+    const token = jwt.sign({ id: users.id, email: users.email }, JWT_SECRET, { expiresIn: '1h' });
+
+    res.json({ message: 'Login bem-sucedido!', token });
 });
 
+// 📌 Rota Protegida (Exemplo)
+app.get('/profile', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Acesso negado!' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Busca os dados do usuário autenticado
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('id, username, email')
+            .eq('id', decoded.id)
+            .single();
+
+        if (error) return res.status(400).json({ error: error.message });
+
+        res.json(user);
+    } catch (error) {
+        res.status(401).json({ error: 'Token inválido!' });
+    }
+});
+
+// Inicia o servidor
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
