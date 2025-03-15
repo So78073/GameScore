@@ -85,6 +85,22 @@ app.get('/profile', async (req, res) => {
     }
 });
 
+// 📌 Rota de Teste da Conexão com o Supabase
+app.get('/test-testsupabase', async (req, res) => {
+    try {
+        const { data, error } = await supabase.from('users').select('*').limit(1); // Apenas 1 registro para testar
+
+        if (error) {
+            return res.status(500).json({ error: 'Erro ao conectar ao Supabase', details: error.message });
+        }
+
+        res.json({ message: 'Conexão bem-sucedida!', data });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro inesperado', details: err.message });
+    }
+});
+
+
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
