@@ -2,8 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const bcrypt = require('bcryptjs');
+const { body, validationResult } = require('express-validator');
 const path = require('path');
 
 const app = express();
@@ -21,25 +22,36 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 📌 Rota de Registro (Sem Criptografia)
-app.post('/register', async (req, res) => {
+// 📌 Rota de Registro (com hashing de senha)
+app.post('/register', [
+    body('email').isEmail().withMessage('Email inválido'),
+    body('password').isLength({ min: 8 }).withMessage('A senha deve ter pelo menos 8 caracteres')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
 
-    // Insere o usuário no Supabase (sem hash da senha)
+    // Criptografar a senha
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insere o usuário no Supabase com a senha criptografada
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, email, password }]);
+        .insert([{ username, email, password: hashedPassword }]);
 
     if (error) return res.status(400).json({ error: error.message });
 
     res.json({ message: 'Usuário registrado com sucesso!' });
 });
 
-// 📌 Rota de Login (Sem Hash de Senha)
+// 📌 Rota de Login (comparando senha criptografada)
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -58,8 +70,9 @@ app.post('/login', async (req, res) => {
         return res.status(400).json({ error: 'Usuário não encontrado!' });
     }
 
-    // Verifica a senha diretamente (NÃO SEGURO, apenas para testes)
-    if (password !== users.password) {
+    // Verifica a senha de forma segura
+    const passwordMatch = await bcrypt.compare(password, users.password);
+    if (!passwordMatch) {
         return res.status(400).json({ error: 'Senha inválida!' });
     }
 
@@ -92,21 +105,6 @@ app.get('/profile', async (req, res) => {
         res.json(user);
     } catch (error) {
         res.status(401).json({ error: 'Token inválido!' });
-    }
-});
-
-// 📌 Rota de Teste da Conexão com o Supabase
-app.get('/testsupabase', async (req, res) => {
-    try {
-        const { data, error } = await supabase.from('users').select('*').limit(1); // Apenas 1 registro para testar
-
-        if (error) {
-            return res.status(500).json({ error: 'Erro ao conectar ao Supabase', details: error.message });
-        }
-
-        res.json({ message: 'Conexão bem-sucedida!', data });
-    } catch (err) {
-        res.status(500).json({ error: 'Erro inesperado', details: err.message });
     }
 });
 
