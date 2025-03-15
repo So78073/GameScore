@@ -59,8 +59,6 @@ app.post('/register', [
     res.json({ message: 'Usuário registrado com sucesso!' });
 });
 
-
-
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -69,37 +67,27 @@ app.post('/login', async (req, res) => {
     }
 
     // Busca o usuário no Supabase
-    const { data: users, error } = await supabase
+    const { data: user, error } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
-        .single();
+        .single();  // Aqui estamos pegando apenas um usuário com o mesmo email
 
-    if (error || !users) {
-        console.error('Erro ao buscar o usuário:', error);
+    if (error || !user) {
         return res.status(400).json({ error: 'Usuário não encontrado!' });
     }
 
-    // Exibe a senha armazenada no banco para depuração
-    console.log('Senha armazenada no banco de dados (criptografada):', users.password);
-
     // Verifica a senha de forma segura
-    const passwordMatch = await bcrypt.compare(password, users.password);
-
+    const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-        console.error('Senha inválida');
         return res.status(400).json({ error: 'Senha inválida!' });
     }
 
-    // Exibe os dados de login bem-sucedido para depuração
-    console.log('Login bem-sucedido para o usuário:', users.email);
-
     // Gera um token JWT
-    const token = jwt.sign({ id: users.id, email: users.email }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
 
     res.json({ message: 'Login bem-sucedido!', token });
 });
-
 
 
 // 📌 Rota Protegida com verificação de username e senha para o Admin
@@ -125,7 +113,8 @@ app.post('/profile', async (req, res) => {
     }
 
     // Compara o username e a senha
-    if (user.username !== username || !(await bcrypt.compare(password, user.password))) {
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (user.username !== username || !passwordMatch) {
         return res.status(400).json({ error: 'Username ou senha inválidos!' });
     }
 
@@ -135,6 +124,7 @@ app.post('/profile', async (req, res) => {
         user: { id: user.id, username: user.username, email: user.email },
     });
 });
+
 
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
