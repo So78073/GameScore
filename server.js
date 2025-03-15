@@ -93,26 +93,38 @@ app.post('/login', async (req, res) => {
 });
 
 
+// 📌 Rota Protegida com verificação de username e senha para o Admin
+app.post('/profile', async (req, res) => {
+    const { username, password } = req.body;
 
-// 📌 Rota Protegida
-app.get('/profile', async (req, res) => {
-
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-
-        // Busca os dados do usuário autenticado
-        const { data: user, error } = await supabase
-            .from('users')
-            .select('id, username, email')
-            .eq('id', decoded.id)
-            .single();
-
-        if (error) return res.status(400).json({ error: error.message });
-
-        res.json(user);
-    } catch (error) {
-        res.status(401).json({ error: 'Token inválido!' });
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username e senha são obrigatórios!' });
     }
+
+    // Verifica se o usuário é o Admin (ID 1)
+    const userId = 1; // ID do Admin
+
+    // Busca o usuário com ID 1 (Admin)
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('id, username, email, password') // Inclui a senha na consulta
+        .eq('id', userId)
+        .single();
+
+    if (error || !user) {
+        return res.status(400).json({ error: 'Usuário Admin não encontrado!' });
+    }
+
+    // Compara o username e a senha
+    if (user.username !== username || !(await bcrypt.compare(password, user.password))) {
+        return res.status(400).json({ error: 'Username ou senha inválidos!' });
+    }
+
+    // Se tudo estiver correto, retorna os dados do Admin
+    res.json({
+        message: 'Acesso autorizado!',
+        user: { id: user.id, username: user.username, email: user.email },
+    });
 });
 
 // Inicia o servidor
