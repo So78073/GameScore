@@ -17,7 +17,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// 📌 Rota para servir o HTML na raiz "/"
 app.post('/register', [
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 8 }).withMessage('A senha deve ter pelo menos 8 caracteres'),
@@ -76,12 +75,14 @@ app.post('/login', async (req, res) => {
         .single();
 
     if (error || !users) {
+        console.error('Erro ao buscar o usuário:', error);
         return res.status(400).json({ error: 'Usuário não encontrado!' });
     }
 
     // Verifica a senha de forma segura
     const passwordMatch = await bcrypt.compare(password, users.password);
     if (!passwordMatch) {
+        console.error('Senha inválida');
         return res.status(400).json({ error: 'Senha inválida!' });
     }
 
@@ -90,6 +91,8 @@ app.post('/login', async (req, res) => {
 
     res.json({ message: 'Login bem-sucedido!', token });
 });
+
+
 
 // 📌 Rota Protegida
 app.get('/profile', async (req, res) => {
