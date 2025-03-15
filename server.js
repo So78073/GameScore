@@ -3,13 +3,22 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Servir arquivos estáticos da pasta "public"
+app.use(express.static(path.join(__dirname, 'public')));
+
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// 📌 Rota para servir o HTML na raiz "/"
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // 📌 Rota de Registro (Sem Criptografia)
 app.post('/register', async (req, res) => {
@@ -86,7 +95,7 @@ app.get('/profile', async (req, res) => {
 });
 
 // 📌 Rota de Teste da Conexão com o Supabase
-app.get('/test-testsupabase', async (req, res) => {
+app.get('/testsupabase', async (req, res) => {
     try {
         const { data, error } = await supabase.from('users').select('*').limit(1); // Apenas 1 registro para testar
 
@@ -99,7 +108,6 @@ app.get('/test-testsupabase', async (req, res) => {
         res.status(500).json({ error: 'Erro inesperado', details: err.message });
     }
 });
-
 
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
