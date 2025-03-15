@@ -96,11 +96,6 @@ app.post('/login', async (req, res) => {
 
 // 📌 Rota Protegida
 app.get('/profile', async (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ error: 'Acesso negado!' });
-    }
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
