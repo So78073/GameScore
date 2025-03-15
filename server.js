@@ -1,13 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
-const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const path = require('path');
-
-const hashedPassword = await bcrypt.hash(password, 10);
 
 const app = express();
 app.use(cors());
@@ -17,7 +13,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-const JWT_SECRET = process.env.JWT_SECRET;
 
 app.post('/register', [
     body('email').isEmail().withMessage('Email inválido'),
@@ -46,13 +41,10 @@ app.post('/register', [
         return res.status(400).json({ error: 'Email já está registrado!' });
     }
 
-    // Criptografar a senha
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insere o usuário no Supabase com a senha criptografada
+    // Insere o usuário no Supabase com a senha em texto simples
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, email, password: hashedPassword }]);
+        .insert([{ username, email, password }]);  // Armazenando a senha em texto simples
 
     if (error) return res.status(400).json({ error: error.message });
 
@@ -81,9 +73,8 @@ app.post('/login', async (req, res) => {
 
         console.log("Usuário encontrado:", user);
 
-        // Verifica a senha de forma segura
-        const passwordMatch = await bcrypt.compare(password, user.password);
-        if (!passwordMatch) {
+        // Verifica se a senha fornecida é a mesma que está no banco de dados
+        if (password !== user.password) {
             console.error('Senha inválida');
             return res.status(400).json({ error: 'Senha inválida!' });
         }
@@ -95,7 +86,6 @@ app.post('/login', async (req, res) => {
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
 });
-
 
 // 📌 Rota Protegida com verificação de username e senha para o Admin
 app.post('/profile', async (req, res) => {
@@ -120,8 +110,7 @@ app.post('/profile', async (req, res) => {
     }
 
     // Compara o username e a senha
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (user.username !== username || !passwordMatch) {
+    if (user.username !== username || password !== user.password) {
         return res.status(400).json({ error: 'Username ou senha inválidos!' });
     }
 
@@ -131,7 +120,6 @@ app.post('/profile', async (req, res) => {
         user: { id: user.id, username: user.username, email: user.email },
     });
 });
-
 
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
