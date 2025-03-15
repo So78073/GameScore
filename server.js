@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -12,7 +11,7 @@ app.use(express.json());
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// 📌 Rota de Registro
+// 📌 Rota de Registro (Sem Criptografia)
 app.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
 
@@ -20,20 +19,17 @@ app.post('/register', async (req, res) => {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
 
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insere o usuário no Supabase
+    // Insere o usuário no Supabase (sem hash da senha)
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, email, password: hashedPassword }]);
+        .insert([{ username, email, password }]);
 
     if (error) return res.status(400).json({ error: error.message });
 
     res.json({ message: 'Usuário registrado com sucesso!' });
 });
 
-// 📌 Rota de Login
+// 📌 Rota de Login (Sem Hash de Senha)
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -52,9 +48,8 @@ app.post('/login', async (req, res) => {
         return res.status(400).json({ error: 'Usuário não encontrado!' });
     }
 
-    // Verifica a senha
-    const isPasswordValid = await bcrypt.compare(password, users.password);
-    if (!isPasswordValid) {
+    // Verifica a senha diretamente (NÃO SEGURO, apenas para testes)
+    if (password !== users.password) {
         return res.status(400).json({ error: 'Senha inválida!' });
     }
 
@@ -64,7 +59,7 @@ app.post('/login', async (req, res) => {
     res.json({ message: 'Login bem-sucedido!', token });
 });
 
-// 📌 Rota Protegida (Exemplo)
+// 📌 Rota Protegida
 app.get('/profile', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
 
