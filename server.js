@@ -52,19 +52,19 @@ app.post('/register', [
 });
 
 app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email e senha são obrigatórios!' });
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username e senha são obrigatórios!' });
     }
 
     try {
-        // Busca o usuário no Supabase
+        // Busca o usuário no Supabase usando o username
         const { data: user, error } = await supabase
             .from('users')
             .select('*')
-            .eq('email', email)
-            .single();  // Aqui estamos pegando apenas um usuário com o mesmo email
+            .eq('username', username)  // Busca pelo username
+            .single();  // Aqui estamos pegando apenas um usuário com o mesmo username
 
         if (error || !user) {
             console.error("Erro ao buscar usuário:", error);
