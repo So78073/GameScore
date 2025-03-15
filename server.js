@@ -66,27 +66,36 @@ app.post('/login', async (req, res) => {
         return res.status(400).json({ error: 'Email e senha são obrigatórios!' });
     }
 
-    // Busca o usuário no Supabase
-    const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();  // Aqui estamos pegando apenas um usuário com o mesmo email
+    try {
+        // Busca o usuário no Supabase
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .single();  // Aqui estamos pegando apenas um usuário com o mesmo email
 
-    if (error || !user) {
-        return res.status(400).json({ error: 'Usuário não encontrado!' });
+        if (error || !user) {
+            console.error("Erro ao buscar usuário:", error);
+            return res.status(400).json({ error: 'Usuário não encontrado!' });
+        }
+
+        console.log("Usuário encontrado:", user);
+
+        // Verifica a senha de forma segura
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            console.error('Senha inválida');
+            return res.status(400).json({ error: 'Senha inválida!' });
+        }
+
+        // Gera um token JWT
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+
+        res.json({ message: 'Login bem-sucedido!', token });
+    } catch (err) {
+        console.error("Erro no login:", err);
+        return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
-
-    // Verifica a senha de forma segura
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-        return res.status(400).json({ error: 'Senha inválida!' });
-    }
-
-    // Gera um token JWT
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-
-    res.json({ message: 'Login bem-sucedido!', token });
 });
 
 
