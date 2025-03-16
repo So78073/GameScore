@@ -90,6 +90,7 @@ app.post('/login', async (req, res) => {
 app.post('/updateScore', async (req, res) => {
     const { username, password, timer, score } = req.body;
 
+    // Verifica se os campos obrigatórios estão presentes
     if (!username || !password || !timer || !score) {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
@@ -154,6 +155,7 @@ app.post('/updateScore', async (req, res) => {
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
 });
+
 
 // Função para comparar os timers (minutos, segundos, milissegundos)
 function compareTimers(newTimer, bestTimer) {
