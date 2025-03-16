@@ -169,7 +169,7 @@ app.post('/update_score', async (req, res) => {
                 id: user.id,
                 username: user.username,
                 score: user.score,  // Adicionando o score
-                best_timer: user.best_timer  // Adicionando o best_timer
+                best_timer: user.best_time  // Adicionando o best_timer
             }
         });
     } catch (err) {
