@@ -141,7 +141,7 @@ app.post('/update_score', async (req, res) => {
         // Busca o usuário no banco de dados
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, username, password')
+            .select('id, username, password, score, best_timer')  // Incluindo mais dados do usuário, como score e best_timer
             .eq('username', trimmedUsername)  // Verificando por username exato
             .single();  // Espera-se que seja um único usuário
 
@@ -154,13 +154,22 @@ app.post('/update_score', async (req, res) => {
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
-        // Se o username e a senha estiverem corretos
-        res.json({ message: 'Usuário encontrado e senha válida!' });
+        // Se o username e a senha estiverem corretos, retornamos os dados do usuário
+        res.json({
+            message: 'Usuário encontrado e senha válida!',
+            user: { 
+                id: user.id,
+                username: user.username,
+                score: user.score,
+                best_timer: user.best_timer  // Incluindo o melhor tempo do usuário (best_timer)
+            }
+        });
     } catch (err) {
         console.error("Erro ao verificar usuário:", err);
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
 });
+
 
 // Função para comparar os timers (minutos, segundos, milissegundos)
 function compareTimers(newTimer, bestTimer) {
