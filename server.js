@@ -124,8 +124,6 @@ app.post('/profile', async (req, res) => {
 
 
 
-
-
 app.post('/update_score', async (req, res) => {
     const { username, password } = req.body;
 
@@ -138,6 +136,8 @@ app.post('/update_score', async (req, res) => {
         // Remove espaços extras no username
         const trimmedUsername = username.trim();
 
+        console.log(`Procurando usuário com o username: ${trimmedUsername}`);
+
         // Busca o usuário no banco de dados, incluindo o score e o best_timer
         const { data: user, error: userError } = await supabase
             .from('users')
@@ -145,9 +145,18 @@ app.post('/update_score', async (req, res) => {
             .eq('username', trimmedUsername)  // Verificando por username exato
             .single();  // Espera-se que seja um único usuário
 
-        if (userError || !user) {
+        // Se houver um erro ao buscar o usuário
+        if (userError) {
+            console.error("Erro de busca no banco de dados:", userError);
+            return res.status(400).json({ error: 'Erro ao buscar usuário no banco de dados!' });
+        }
+
+        if (!user) {
+            console.log("Usuário não encontrado.");
             return res.status(400).json({ error: 'Usuário não encontrado!' });
         }
+
+        console.log("Usuário encontrado:", user);
 
         // Verifica se a senha fornecida é a mesma que está no banco de dados
         if (password !== user.password) {
