@@ -86,11 +86,9 @@ app.post('/login', async (req, res) => {
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
 });
-
 app.post('/updateScore', async (req, res) => {
     const { username, password, timer, score } = req.body;
 
-    // Verifica se os campos obrigatórios estão presentes
     if (!username || !password || !timer || !score) {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
@@ -106,11 +104,14 @@ app.post('/updateScore', async (req, res) => {
     }
 
     try {
-        // Busca o usuário no Supabase usando o username
+        // Remove espaços extras no username e força comparação case-insensitive
+        const trimmedUsername = username.trim();
+
+        // Busca o usuário no Supabase usando o username (insensível a maiúsculas/minúsculas)
         const { data: user, error: userError } = await supabase
             .from('users')
             .select('id, username, password, score, best_timer')
-            .eq('username', username)
+            .ilike('username', trimmedUsername)  // Usando ilike para garantir que seja insensível a maiúsculas/minúsculas
             .single();
 
         if (userError || !user) {
@@ -155,6 +156,7 @@ app.post('/updateScore', async (req, res) => {
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
 });
+
 
 
 // Função para comparar os timers (minutos, segundos, milissegundos)
