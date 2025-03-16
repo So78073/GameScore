@@ -110,7 +110,7 @@ app.post('/updateScore', async (req, res) => {
         // Busca o usuário no Supabase usando o username (insensível a maiúsculas/minúsculas)
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, username, password, score, best_timer')
+            .select('id, username, password')
             .ilike('username', trimmedUsername)  // Usando ilike para garantir que seja insensível a maiúsculas/minúsculas
             .single();
 
