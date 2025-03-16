@@ -126,22 +126,12 @@ app.post('/profile', async (req, res) => {
 
 
 
-app.post('/updateScore', async (req, res) => {
-    const { username, password, timer, score } = req.body;
+app.post('/update_score', async (req, res) => {
+    const { username, password } = req.body;
 
-    // Verifica se todos os dados foram enviados
-    if (!username || !password || !timer || !score) {
-        return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
-    }
-
-    // Valida o formato do timer
-    if (!Array.isArray(timer) || timer.length !== 3) {
-        return res.status(400).json({ error: 'O formato do timer deve ser [minutos, segundos, milissegundos]' });
-    }
-
-    const [minutes, seconds, milliseconds] = timer;
-    if (typeof minutes !== 'number' || typeof seconds !== 'number' || typeof milliseconds !== 'number') {
-        return res.status(400).json({ error: 'O timer deve conter valores numéricos.' });
+    // Verifica se ambos os campos foram enviados
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username e senha são obrigatórios!' });
     }
 
     try {
@@ -151,9 +141,9 @@ app.post('/updateScore', async (req, res) => {
         // Busca o usuário no banco de dados
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, username, password, score, best_timer')
-            .eq('username', trimmedUsername)  // Verificando por username
-            .single();
+            .select('id, username, password')
+            .eq('username', trimmedUsername)  // Verificando por username exato
+            .single();  // Espera-se que seja um único usuário
 
         if (userError || !user) {
             return res.status(400).json({ error: 'Usuário não encontrado!' });
@@ -164,37 +154,10 @@ app.post('/updateScore', async (req, res) => {
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
-        // Atualiza o score
-        const newScore = user.score + score;
-
-        // Verifica o tempo
-        const [bestMinutes, bestSeconds, bestMilliseconds] = user.best_timer ? JSON.parse(user.best_timer) : [Infinity, Infinity, Infinity];
-
-        const isBetterTimer = compareTimers(timer, [bestMinutes, bestSeconds, bestMilliseconds]);
-
-        // Se o novo timer for melhor, atualiza o best_timer
-        const newBestTimer = isBetterTimer ? JSON.stringify(timer) : user.best_timer;
-
-        // Atualiza no banco de dados
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({
-                score: newScore,
-                best_timer: newBestTimer,
-            })
-            .eq('id', user.id);
-
-        if (updateError) {
-            return res.status(400).json({ error: updateError.message });
-        }
-
-        res.json({
-            message: 'Score e tempo atualizados com sucesso!',
-            newScore,
-            newBestTimer,
-        });
+        // Se o username e a senha estiverem corretos
+        res.json({ message: 'Usuário encontrado e senha válida!' });
     } catch (err) {
-        console.error("Erro ao atualizar score:", err);
+        console.error("Erro ao verificar usuário:", err);
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
 });
