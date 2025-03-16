@@ -13,6 +13,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
 app.post('/register', [
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 8 }).withMessage('A senha deve ter pelo menos 8 caracteres'),
@@ -29,26 +30,32 @@ app.post('/register', [
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
 
-    // Verifica se já existe um usuário com o mesmo email ou username
-    const { data: existingUser, error: queryError } = await supabase
+    // 🔍 Verifica se o email já existe
+    const { data: existingEmail, error: emailError } = await supabase
         .from('users')
-        .select('*')
-        .or(`email.eq.${email},username.eq.${username}`)
+        .select('id')
+        .eq('email', email)
         .single();
 
-    if (existingUser) {
-        if (existingUser.email === email) {
-            return res.status(400).json({ error: 'Email já está registrado!' });
-        }
-        if (existingUser.username === username) {
-            return res.status(400).json({ error: 'Nome de usuário já existe!' });
-        }
+    if (existingEmail) {
+        return res.status(400).json({ error: 'Email já está registrado!' });
     }
 
-    // Insere o usuário no Supabase (não esqueça de hashear a senha)
+    // 🔍 Verifica se o username já existe
+    const { data: existingUsername, error: usernameError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .single();
+
+    if (existingUsername) {
+        return res.status(400).json({ error: 'Nome de usuário já existe!' });
+    }
+
+    // 📌 Insere o usuário no banco de dados (senha em texto simples)
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, email, password }]); // Armazene a senha de forma segura!
+        .insert([{ username, email, password }]); // ⚠️ Senha armazenada sem hash
 
     if (error) return res.status(400).json({ error: error.message });
 
