@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Servir arquivos estáticos da pasta "public"
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -31,7 +31,7 @@ app.post('/register', [
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
 
-    // 🔍 Verifica se o email já existe
+   
     const { data: existingEmail, error: emailError } = await supabase
         .from('users')
         .select('id')
@@ -42,7 +42,7 @@ app.post('/register', [
         return res.status(400).json({ error: 'Email já está registrado!' });
     }
 
-    // 🔍 Verifica se o username já existe
+    
     const { data: existingUsername, error: usernameError } = await supabase
         .from('users')
         .select('id')
@@ -53,7 +53,7 @@ app.post('/register', [
         return res.status(400).json({ error: 'Nome de usuário já existe!' });
     }
 
-    // 📌 Insere o usuário no banco de dados (senha em texto simples)
+    
     const { data, error } = await supabase
         .from('users')
         .insert([{ username, email, password }]);
@@ -72,12 +72,12 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        // Busca o usuário no Supabase usando o username
+        
         const { data: user, error } = await supabase
             .from('users')
             .select('*')
-            .eq('username', username)  // Busca pelo username
-            .single();  // Aqui estamos pegando apenas um usuário com o mesmo username
+            .eq('username', username)  
+            .single();  
 
         if (error || !user) {
             console.error("Erro ao buscar usuário:", error);
@@ -86,13 +86,13 @@ app.post('/login', async (req, res) => {
 
         console.log("Usuário encontrado:", user);
 
-        // Verifica se a senha fornecida é a mesma que está no banco de dados
+        
         if (password !== user.password) {
             console.error('Senha inválida');
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
-        // Se o login for bem-sucedido, apenas retorne uma mensagem de sucesso
+        
         res.json({ message: 'Login bem-sucedido!' });
     } catch (err) {
         console.error("Erro no login:", err);
@@ -101,7 +101,7 @@ app.post('/login', async (req, res) => {
 });
 
 
-// 📌 Rota Protegida com verificação de username e senha para o Admin
+
 app.post('/profile', async (req, res) => {
     const { username, password } = req.body;
 
@@ -109,10 +109,10 @@ app.post('/profile', async (req, res) => {
         return res.status(400).json({ error: 'Username e senha são obrigatórios!' });
     }
 
-    // Verifica se o usuário é o Admin (ID 1)
-    const userId = 1; // ID do Admin
+    
+    const userId = 1;
 
-    // Busca o usuário com ID 1 (Admin)
+    
     const { data: user, error } = await supabase
         .from('users')
         .select('id, username, email, password') // Inclui a senha na consulta
@@ -123,12 +123,12 @@ app.post('/profile', async (req, res) => {
         return res.status(400).json({ error: 'Usuário Admin não encontrado!' });
     }
 
-    // Compara o username e a senha
+    
     if (user.username !== username || password !== user.password) {
         return res.status(400).json({ error: 'Username ou senha inválidos!' });
     }
 
-    // Se tudo estiver correto, retorna os dados do Admin
+    
     res.json({
         message: 'Acesso autorizado!',
         user: { id: user.id, username: user.username, email: user.email },
@@ -145,12 +145,12 @@ app.post('/update_score', async (req, res) => {
     }
 
     try {
-        // Remove espaços extras no username
+
         const trimmedUsername = username.trim();
 
         console.log(`Procurando usuário com o username: ${trimmedUsername}`);
 
-        // Busca o usuário no banco de dados
+        
         const { data: user, error: userError } = await supabase
             .from('users')
             .select('id, username, password, score, best_time')
@@ -164,14 +164,14 @@ app.post('/update_score', async (req, res) => {
 
         console.log("Usuário encontrado:", user);
 
-        // Verifica se a senha fornecida é a mesma que está no banco de dados
+        
         if (password !== user.password) {
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
-        // Converte o best_time do banco e o novo tempo recebido para comparação
-        const bestTimeArray = user.best_time.split(':').map(Number);  // Convertendo "0:0:0" -> [0,0,0]
-        const newTimeArray = timer.split(':').map(Number);            // Convertendo "0:0:0" -> [0,0,0]
+        
+        const bestTimeArray = user.best_time.split(':').map(Number);
+        const newTimeArray = timer.split(':').map(Number);
 
         // Compara os tempos e define o novo melhor tempo
         let updatedBestTime = user.best_time;
@@ -179,10 +179,10 @@ app.post('/update_score', async (req, res) => {
             updatedBestTime = timer; // Se for menor, atualiza o best_time
         }
 
-        // Atualiza o score somando o valor recebido ao que já está no banco
+        
         const updatedScore = user.score + score;
 
-        // Atualiza os valores no banco de dados
+        
         const { error: updateError } = await supabase
             .from('users')
             .update({ best_time: updatedBestTime, score: updatedScore })
@@ -193,7 +193,7 @@ app.post('/update_score', async (req, res) => {
             return res.status(500).json({ error: 'Erro ao atualizar os dados do usuário.' });
         }
 
-        // Responde com os novos valores
+        
         res.json({
             message: 'Score e best_time atualizados com sucesso!',
             user: {
@@ -210,13 +210,13 @@ app.post('/update_score', async (req, res) => {
     }
 });
 
-// Função para comparar os tempos
+
 function compareTimers(newTimer, bestTimer) {
     for (let i = 0; i < newTimer.length; i++) {
         if (newTimer[i] < bestTimer[i]) return true;
         if (newTimer[i] > bestTimer[i]) return false;
     }
-    return false; // Se forem iguais, não atualiza
+    return false; 
 }
 
 // Inicia o servidor
