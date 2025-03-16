@@ -13,7 +13,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-
 app.post('/register', [
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 8 }).withMessage('A senha deve ter pelo menos 8 caracteres'),
@@ -30,21 +29,26 @@ app.post('/register', [
         return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
 
-    // Verifica se o email já existe
-    const { data: existingUser, error: emailError } = await supabase
+    // Verifica se já existe um usuário com o mesmo email ou username
+    const { data: existingUser, error: queryError } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .or(`email.eq.${email},username.eq.${username}`)
         .single();
 
     if (existingUser) {
-        return res.status(400).json({ error: 'Email já está registrado!' });
+        if (existingUser.email === email) {
+            return res.status(400).json({ error: 'Email já está registrado!' });
+        }
+        if (existingUser.username === username) {
+            return res.status(400).json({ error: 'Nome de usuário já existe!' });
+        }
     }
 
-    // Insere o usuário no Supabase com a senha em texto simples
+    // Insere o usuário no Supabase (não esqueça de hashear a senha)
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, email, password }]);  // Armazenando a senha em texto simples
+        .insert([{ username, email, password }]); // Armazene a senha de forma segura!
 
     if (error) return res.status(400).json({ error: error.message });
 
