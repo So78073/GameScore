@@ -13,11 +13,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-
 app.post('/register', [
     body('email').isEmail().withMessage('Email inválido'),
     body('password').isLength({ min: 8 }).withMessage('A senha deve ter pelo menos 8 caracteres'),
-    body('username').notEmpty().withMessage('O nome de usuário é obrigatório')
+    body('username')
+        .notEmpty().withMessage('O nome de usuário é obrigatório')
+        .matches(/^[^_]+$/).withMessage('O nome de usuário não pode conter "_"')
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -55,12 +56,13 @@ app.post('/register', [
     // 📌 Insere o usuário no banco de dados (senha em texto simples)
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, email, password }]); // ⚠️ Senha armazenada sem hash
+        .insert([{ username, email, password }]);
 
     if (error) return res.status(400).json({ error: error.message });
 
     res.json({ message: 'Usuário registrado com sucesso!' });
 });
+
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
