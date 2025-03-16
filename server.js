@@ -138,10 +138,10 @@ app.post('/update_score', async (req, res) => {
         // Remove espaços extras no username
         const trimmedUsername = username.trim();
 
-        // Busca o usuário no banco de dados
+        // Busca o usuário no banco de dados, incluindo o score e o best_timer
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, username, password')
+            .select('id, username, password, score, best_timer')  // Incluindo o score e best_timer na consulta
             .eq('username', trimmedUsername)  // Verificando por username exato
             .single();  // Espera-se que seja um único usuário
 
@@ -154,13 +154,14 @@ app.post('/update_score', async (req, res) => {
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
+        // Resposta com todos os dados, incluindo score e best_timer
         res.json({
             message: 'Usuário encontrado e senha válida!',
             user: { 
                 id: user.id,
                 username: user.username,
-                score: user.score,
-                best_timer: user.best_timer  
+                score: user.score,  // Adicionando o score
+                best_timer: user.best_timer  // Adicionando o best_timer
             }
         });
     } catch (err) {
@@ -168,19 +169,6 @@ app.post('/update_score', async (req, res) => {
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
 });
-
-// Função para comparar os timers (minutos, segundos, milissegundos)
-function compareTimers(newTimer, bestTimer) {
-    const [newMinutes, newSeconds, newMilliseconds] = newTimer;
-    const [bestMinutes, bestSeconds, bestMilliseconds] = bestTimer;
-
-    if (newMinutes < bestMinutes) return true;
-    if (newMinutes === bestMinutes) {
-        if (newSeconds < bestSeconds) return true;
-        if (newSeconds === bestSeconds && newMilliseconds < bestMilliseconds) return true;
-    }
-    return false;
-}
 
 
 // Inicia o servidor
