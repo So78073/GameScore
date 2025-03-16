@@ -154,8 +154,15 @@ app.post('/update_score', async (req, res) => {
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
-        // Se o username e a senha estiverem corretos
-        res.json({ message: 'Usuário encontrado e senha válida!' });
+        res.json({
+            message: 'Usuário encontrado e senha válida!',
+            user: { 
+                id: user.id,
+                username: user.username,
+                score: user.score,
+                best_timer: user.best_timer  // Incluindo o melhor tempo do usuário (best_timer)
+            }
+        });
     } catch (err) {
         console.error("Erro ao verificar usuário:", err);
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
