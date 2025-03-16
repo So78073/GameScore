@@ -124,11 +124,11 @@ app.post('/profile', async (req, res) => {
 
 
 app.post('/update_score', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, timer, score } = req.body;
 
-    // Verifica se ambos os campos foram enviados
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Username e senha são obrigatórios!' });
+    // Verifica se todos os campos foram enviados
+    if (!username || !password || !timer || score === undefined) {
+        return res.status(400).json({ error: 'Todos os campos são obrigatórios!' });
     }
 
     try {
@@ -137,21 +137,15 @@ app.post('/update_score', async (req, res) => {
 
         console.log(`Procurando usuário com o username: ${trimmedUsername}`);
 
-        // Busca o usuário no banco de dados, incluindo o score e o best_time
+        // Busca o usuário no banco de dados
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, username, password, score, best_time')  // Incluindo o score e best_time na consulta
-            .eq('username', trimmedUsername)  // Verificando por username exato
-            .single();  // Espera-se que seja um único usuário
+            .select('id, username, password, score, best_time')
+            .eq('username', trimmedUsername)
+            .single();
 
-        // Se houver um erro ao buscar o usuário
-        if (userError) {
-            console.error("Erro de busca no banco de dados:", userError);
-            return res.status(400).json({ error: `Erro ao buscar usuário no banco de dados: ${userError.message}` });
-        }
-
-        if (!user) {
-            console.log("Usuário não encontrado.");
+        if (userError || !user) {
+            console.error("Erro ao buscar usuário:", userError);
             return res.status(400).json({ error: 'Usuário não encontrado!' });
         }
 
@@ -162,22 +156,55 @@ app.post('/update_score', async (req, res) => {
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
-        // Resposta com todos os dados, incluindo score e best_time
+        // Converte o best_time do banco e o novo tempo recebido para comparação
+        const bestTimeArray = user.best_time.split(':').map(Number);  // Convertendo "0:0:0" -> [0,0,0]
+        const newTimeArray = timer.split(':').map(Number);            // Convertendo "0:0:0" -> [0,0,0]
+
+        // Compara os tempos e define o novo melhor tempo
+        let updatedBestTime = user.best_time;
+        if (compareTimers(newTimeArray, bestTimeArray)) {
+            updatedBestTime = timer; // Se for menor, atualiza o best_time
+        }
+
+        // Atualiza o score somando o valor recebido ao que já está no banco
+        const updatedScore = user.score + score;
+
+        // Atualiza os valores no banco de dados
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ best_time: updatedBestTime, score: updatedScore })
+            .eq('id', user.id);
+
+        if (updateError) {
+            console.error("Erro ao atualizar usuário:", updateError);
+            return res.status(500).json({ error: 'Erro ao atualizar os dados do usuário.' });
+        }
+
+        // Responde com os novos valores
         res.json({
-            message: 'Usuário encontrado e senha válida!',
-            user: { 
+            message: 'Score e best_time atualizados com sucesso!',
+            user: {
                 id: user.id,
                 username: user.username,
-                score: user.score,  // Adicionando o score
-                best_timer: user.best_time  // Adicionando o best_time
+                score: updatedScore,
+                best_time: updatedBestTime
             }
         });
+
     } catch (err) {
         console.error("Erro ao verificar usuário:", err);
         return res.status(500).json({ error: 'Erro interno do servidor. Tente novamente mais tarde.' });
     }
 });
 
+// Função para comparar os tempos
+function compareTimers(newTimer, bestTimer) {
+    for (let i = 0; i < newTimer.length; i++) {
+        if (newTimer[i] < bestTimer[i]) return true;
+        if (newTimer[i] > bestTimer[i]) return false;
+    }
+    return false; // Se forem iguais, não atualiza
+}
 
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
