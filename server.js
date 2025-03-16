@@ -137,10 +137,10 @@ app.post('/update_score', async (req, res) => {
 
         console.log(`Procurando usuário com o username: ${trimmedUsername}`);
 
-        // Busca o usuário no banco de dados, incluindo o score e o best_timer
+        // Busca o usuário no banco de dados, incluindo o score e o best_time
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, username, password, score, best_timer')  // Incluindo o score e best_timer na consulta
+            .select('id, username, password, score, best_time')  // Incluindo o score e best_time na consulta
             .eq('username', trimmedUsername)  // Verificando por username exato
             .single();  // Espera-se que seja um único usuário
 
@@ -162,14 +162,14 @@ app.post('/update_score', async (req, res) => {
             return res.status(400).json({ error: 'Senha inválida!' });
         }
 
-        // Resposta com todos os dados, incluindo score e best_timer
+        // Resposta com todos os dados, incluindo score e best_time
         res.json({
             message: 'Usuário encontrado e senha válida!',
             user: { 
                 id: user.id,
                 username: user.username,
                 score: user.score,  // Adicionando o score
-                best_timer: user.best_time  // Adicionando o best_timer
+                best_timer: user.best_time  // Adicionando o best_time
             }
         });
     } catch (err) {
