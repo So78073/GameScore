@@ -123,7 +123,6 @@ app.post('/profile', async (req, res) => {
 });
 
 
-
 app.post('/update_score', async (req, res) => {
     const { username, password } = req.body;
 
@@ -148,7 +147,7 @@ app.post('/update_score', async (req, res) => {
         // Se houver um erro ao buscar o usuário
         if (userError) {
             console.error("Erro de busca no banco de dados:", userError);
-            return res.status(400).json({ error: 'Erro ao buscar usuário no banco de dados!' });
+            return res.status(400).json({ error: `Erro ao buscar usuário no banco de dados: ${userError.message}` });
         }
 
         if (!user) {
